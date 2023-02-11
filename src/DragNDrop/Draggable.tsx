@@ -18,7 +18,7 @@ const Draggable: FC<IDraggableProps> = ({
   const initMousePos = useRef<IPoint>();
   const draggableElementRef = useRef<HTMLElement | null>(null);
   const droppabledIdRef = useRef<string | null>(null);
-  const isDraggingRef = useRef<boolean>(false);
+  const isDraggingRef = useRef(false);
 
   const [isDraggingCurrent, setIsDraggingCurrent] = useState(false);
   const clonedElement = cloneElement(renderClone, { ref: draggableElementRef });
@@ -37,9 +37,77 @@ const Draggable: FC<IDraggableProps> = ({
     cords.current = { x: 0, y: 0 };
     lerpedElementPosition.current = { x: 0, y: 0 };
 
+    document.addEventListener("dragstart", onDragStart);
     document.body.addEventListener("mousemove", handleOnMouseMove);
     document.body.addEventListener("mouseup", handleOnMouseUp);
     document.addEventListener("mouseup", handleOnMouseUp);
+  };
+
+  const onDragStart = (event: DragEvent) => {
+    event.preventDefault();
+  };
+
+  const handleOnMouseUp = (event: MouseEvent) => {
+    document.body.removeEventListener("mousemove", handleOnMouseMove);
+    document.body.removeEventListener("mouseup", handleOnMouseUp);
+    document.removeEventListener("mouseup", handleOnMouseUp);
+    document.removeEventListener("dragstart", onDragStart);
+    document.body.style.setProperty("cursor", "default");
+    setIsDraggingCurrent(false);
+
+    ended.current = false;
+    cords.current = { x: 0, y: 0 };
+    lerpedElementPosition.current = { x: 0, y: 0 };
+
+    if (droppabledIdRef.current != null && onDragEnd && isDraggingRef.current) {
+      onDragEnd(droppabledIdRef.current, draggableId);
+    }
+    if (setDroppableId) setDroppableId(null);
+  };
+
+  const handleOnMouseMove = (event: MouseEvent) => {
+    const xCord = event.x - bound.current!.x;
+    const yCord = event.y - bound.current!.y;
+
+    if (xCord === initMousePos.current!.x && yCord === initMousePos.current!.y)
+      return;
+
+    setIsDraggingCurrent(true);
+
+    cords.current.x = xCord;
+    cords.current.y = yCord;
+
+    if (draggableElementRef.current == null) return;
+
+    const draggableEl = draggableElementRef.current;
+    draggableEl.style.setProperty("display", "none");
+
+    const elemBelow = document.elementFromPoint(
+      event.clientX,
+      event.clientY
+    ) as HTMLElement;
+
+    const el = elemBelow
+      ? getElementWithAttribute(elemBelow, "data-droppable-context-id")
+      : null;
+
+    if (
+      el != null &&
+      el.getAttribute("data-droppable-context-id") === contextId &&
+      setDroppableId != null
+    ) {
+      setDroppableId(el.getAttribute("data-droppable-id"));
+    } else if (setDroppableId != null) {
+      setDroppableId(null);
+    }
+
+    draggableEl.style.setProperty("display", null);
+
+    if (ended.current)
+      draggableEl.style.setProperty(
+        "transform",
+        `translate(${xCord}px, ${yCord}px)`
+      );
   };
 
   useEffect(() => {
@@ -93,69 +161,6 @@ const Draggable: FC<IDraggableProps> = ({
       if (timeoutRef) clearTimeout(timeoutRef);
     };
   }, [isDraggingCurrent]);
-
-  const handleOnMouseUp = (event: MouseEvent) => {
-    document.body.removeEventListener("mousemove", handleOnMouseMove);
-    document.body.removeEventListener("mouseup", handleOnMouseUp);
-    document.removeEventListener("mouseup", handleOnMouseUp);
-    document.body.style.setProperty("cursor", "default");
-    ref.current?.style.setProperty("pointer-events", null);
-    setIsDraggingCurrent(false);
-
-    ended.current = false;
-    cords.current = { x: 0, y: 0 };
-    lerpedElementPosition.current = { x: 0, y: 0 };
-
-    if (droppabledIdRef.current != null && onDragEnd && isDraggingRef.current) {
-      onDragEnd(droppabledIdRef.current, draggableId);
-    }
-    if (setDroppableId) setDroppableId(null);
-  };
-
-  const handleOnMouseMove = (event: MouseEvent) => {
-    const xCord = event.x - bound.current!.x;
-    const yCord = event.y - bound.current!.y;
-
-    if (xCord === initMousePos.current!.x && yCord === initMousePos.current!.y)
-      return;
-
-    const draggableEl = draggableElementRef.current!;
-
-    ref.current?.style.setProperty("pointer-events", "none");
-
-    setIsDraggingCurrent(true);
-
-    cords.current.x = xCord;
-    cords.current.y = yCord;
-
-    draggableEl.style.setProperty("display", "none");
-
-    const elemBelow = document.elementFromPoint(
-      event.clientX,
-      event.clientY
-    ) as HTMLElement;
-    const el = elemBelow
-      ? getElementWithAttribute(elemBelow, "data-droppable-context-id")
-      : null;
-
-    if (
-      el != null &&
-      el.getAttribute("data-droppable-context-id") === contextId &&
-      setDroppableId != null
-    ) {
-      setDroppableId(el.getAttribute("data-droppable-id"));
-    } else if (setDroppableId != null) {
-      setDroppableId(null);
-    }
-
-    draggableEl.style.setProperty("display", null);
-
-    if (ended.current)
-      draggableEl.style.setProperty(
-        "transform",
-        `translate(${xCord}px, ${yCord}px)`
-      );
-  };
 
   useEffect(() => {
     ref.current?.addEventListener("mousedown", handleOnMouseDown);

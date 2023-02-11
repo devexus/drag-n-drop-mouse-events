@@ -15,8 +15,20 @@ const DRAGGABLE_DATA = [
   },
 ];
 
+const DROPPABLE_DATA = [
+  {
+    id: "droppable_1",
+    name: "droppable area one",
+  },
+  {
+    id: "droppable_2",
+    name: "droppable area two",
+  },
+];
+
 function App() {
-  const [list] = useState(DRAGGABLE_DATA);
+  const [draggableList, setDraggableList] = useState(DRAGGABLE_DATA);
+  const [droppableList, setDroppableList] = useState(DROPPABLE_DATA);
   const [selected, setSelected] = useState<string[]>([]);
 
   return (
@@ -27,43 +39,28 @@ function App() {
             console.log("draggable", draggableId, "droppabled", droppableId);
           }}
         >
-          <Droppable droppableId="droppable_1">
-            {(isOver, ref, droppableProps) => {
-              return (
-                <div
-                  ref={ref}
-                  {...droppableProps}
-                  className="droppable-area-2"
-                  style={{
-                    height: "200px",
-                    border: isOver ? "dashed 1px #000" : undefined,
-                  }}
-                >
-                  <span>Droppable area droppable_1</span>
-                </div>
-              );
-            }}
-          </Droppable>
-          <Droppable droppableId="droppable_2">
-            {(isOver, ref, droppableProps) => {
-              return (
-                <div
-                  ref={ref}
-                  {...droppableProps}
-                  className="droppable-area-2"
-                  style={{
-                    height: "200px",
-                    border: isOver ? "dashed 1px #000" : undefined,
-                  }}
-                >
-                  <span>Droppable area droppable_2</span>
-                </div>
-              );
-            }}
-          </Droppable>
+          {droppableList.map((el) => (
+            <Droppable key={el.id} droppableId={el.id}>
+              {(isOver, ref, droppableProps) => {
+                return (
+                  <div
+                    ref={ref}
+                    {...droppableProps}
+                    className="droppable-area-2"
+                    style={{
+                      height: "200px",
+                      border: isOver ? "dashed 1px #000" : undefined,
+                    }}
+                  >
+                    <span>{el.name}</span>
+                  </div>
+                );
+              }}
+            </Droppable>
+          ))}
           <div className="spacer"></div>
           <div className="draggable-wrapper">
-            {list.map((el) => {
+            {draggableList.map((el) => {
               return (
                 <Draggable
                   key={el.id}
@@ -126,8 +123,10 @@ function App() {
                           setSelected((selected) => [...selected, el.id]);
                         }}
                         style={{
-                          opacity:
-                            isDragging || selected.includes(el.id) ? 0.5 : 1,
+                          border: selected.includes(el.id)
+                            ? "solid 1px blue"
+                            : undefined,
+                          opacity: isDragging ? 0.5 : 1,
                           userSelect: "none",
                         }}
                       >
@@ -143,6 +142,42 @@ function App() {
               );
             })}
           </div>
+          <button
+            onClick={() => {
+              setDraggableList((e) => [
+                ...e,
+                { id: "draggable_3", name: "reference three" },
+              ]);
+            }}
+          >
+            Load more draggable
+          </button>
+          <button
+            onClick={() => {
+              setDroppableList((e) => [
+                ...e,
+                { id: "droppable_3", name: "droppabe area three" },
+              ]);
+            }}
+          >
+            Load more droppable
+          </button>
+          <button
+            onClick={() => {
+              setDraggableList([]);
+              setSelected([]);
+            }}
+          >
+            Clear draggable
+          </button>
+          <button
+            onClick={() => {
+              setDroppableList([]);
+              setSelected([]);
+            }}
+          >
+            Clear droppable
+          </button>
         </DragDropContext>
       </div>
       <div style={{ height: 2000 }}></div>
