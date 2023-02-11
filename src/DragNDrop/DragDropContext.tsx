@@ -1,34 +1,18 @@
-import {
-  createContext,
-  FC,
-  ReactNode,
-  useContext,
-  useRef,
-  useState,
-} from "react";
-import useUniqueContextId from "./use-unique-context-id";
+import { createContext, FC, useContext, useRef, useState } from "react";
+import { IDragDropContextProps, IDragDropProviderProps } from "./types";
+import useUniqueContextId from "./useUniqueContextId";
 
-interface IDragDropCtx {
-  ref: React.RefObject<HTMLElement> | null;
-  contextId: string | null;
-  onDragEnd?: (droppableId: string, dragglabeId: string) => void;
-  setDroppableId: React.Dispatch<React.SetStateAction<string | null>> | null;
-  droppableId: string | null;
-}
-
-const DragDropCtx = createContext<IDragDropCtx>({
+const DragDropCtx = createContext<IDragDropContextProps>({
   ref: null,
   contextId: null,
   setDroppableId: null,
   droppableId: null,
 });
 
-interface IDragDropContext {
-  children: ReactNode;
-  onDragEnd?: (droppableId: string, dragglabeId: string) => void;
-}
-
-const DragDropContext: FC<IDragDropContext> = ({ children, onDragEnd }) => {
+const DragDropContext: FC<IDragDropProviderProps> = ({
+  children,
+  onDragEnd,
+}) => {
   const ref = useRef<HTMLElement>(null);
   const contextId: string = useUniqueContextId();
   const [droppableId, setDroppableId] = useState<string | null>(null);

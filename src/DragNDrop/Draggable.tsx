@@ -1,33 +1,27 @@
-import { cloneElement, ReactElement, useEffect, useRef, useState } from "react";
+import { cloneElement, FC, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useDragDrop } from "./DragDropContext";
 import getElementWithAttribute from "./getElementWithAttribute";
+import { IDraggableProps, IPoint } from "./types";
 
-const Draggable = ({
+const Draggable: FC<IDraggableProps> = ({
   renderClone,
   children,
   draggableId,
-}: {
-  draggableId: string;
-  renderClone: ReactElement;
-  children(
-    isDragging: boolean,
-    innerRef: React.RefObject<HTMLDivElement>
-  ): React.ReactElement<HTMLElement>;
 }) => {
   const { contextId, setDroppableId, droppableId, onDragEnd } = useDragDrop();
   const ref = useRef<HTMLDivElement | null>(null);
   const bound = useRef<DOMRect>();
-  const currentValueRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const lerpedElementPosition = useRef<IPoint>({ x: 0, y: 0 });
   const ended = useRef(false);
-  const runOnce = useRef(false);
-  const cords = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-  const initMousePos = useRef<{ x: number; y: number }>();
-  const [isDraggingCurrent, setIsDraggingCurrent] = useState(false);
+  const cords = useRef<IPoint>({ x: 0, y: 0 });
+  const initMousePos = useRef<IPoint>();
   const draggableElementRef = useRef<HTMLElement | null>(null);
-  const clonedElement = cloneElement(renderClone, { ref: draggableElementRef });
   const droppabledIdRef = useRef<string | null>(null);
   const isDraggingRef = useRef<boolean>(false);
+
+  const [isDraggingCurrent, setIsDraggingCurrent] = useState(false);
+  const clonedElement = cloneElement(renderClone, { ref: draggableElementRef });
 
   const handleOnMouseDown = (event: MouseEvent) => {
     if (event.button !== 0) return;
@@ -40,9 +34,8 @@ const Draggable = ({
     initMousePos.current = { x: xCord, y: yCord };
 
     ended.current = false;
-    runOnce.current = false;
     cords.current = { x: 0, y: 0 };
-    currentValueRef.current = { x: 0, y: 0 };
+    lerpedElementPosition.current = { x: 0, y: 0 };
 
     document.body.addEventListener("mousemove", handleOnMouseMove);
     document.body.addEventListener("mouseup", handleOnMouseUp);
@@ -50,64 +43,51 @@ const Draggable = ({
   };
 
   useEffect(() => {
-    if (
-      !isDraggingCurrent ||
-      draggableElementRef?.current == null ||
-      bound.current == null
-    )
-      return;
+    if (!isDraggingCurrent) return;
 
-    if (draggableElementRef.current) draggableElementRef.current.hidden = true;
+    const draggableEl = draggableElementRef.current!;
+    const b = bound.current!;
 
     let timeoutRef: number;
 
     document.body.style.setProperty("cursor", "grabbing");
-    draggableElementRef.current.style.setProperty("position", "fixed");
-    draggableElementRef.current.style.setProperty("z-index", "5000");
-    draggableElementRef.current.style.setProperty(
-      "width",
-      `${bound.current.width}px`
-    );
-    draggableElementRef.current.style.setProperty("height", `50px`);
-    draggableElementRef.current.style.setProperty(
-      "left",
-      `${bound.current.left}px`
-    );
-    draggableElementRef.current.style.setProperty(
-      "top",
-      `${bound.current.top}px`
-    );
+    draggableEl.style.setProperty("position", "fixed");
+    draggableEl.style.setProperty("z-index", "5000");
+    draggableEl.style.setProperty("width", `${b.width}px`);
+    draggableEl.style.setProperty("height", `50px`);
+    draggableEl.style.setProperty("left", `${b.left}px`);
+    draggableEl.style.setProperty("top", `${b.top}px`);
 
-    function initialLerpedTransition(duration: number) {
+    const initialLerpedTransition = (duration: number) => {
       let startTime = Date.now();
       let currentTime;
       let progress;
 
-      function transitionStep() {
+      const transitionStep = () => {
         currentTime = Date.now() - startTime;
         progress = currentTime / duration;
-        currentValueRef.current.x =
-          (1 - progress) * currentValueRef.current.x +
+        lerpedElementPosition.current.x =
+          (1 - progress) * lerpedElementPosition.current.x +
           progress * cords.current.x;
-        currentValueRef.current.y =
-          (1 - progress) * currentValueRef.current.y +
+        lerpedElementPosition.current.y =
+          (1 - progress) * lerpedElementPosition.current.y +
           progress * cords.current.y;
 
         if (progress < 1) {
-          draggableElementRef?.current?.style.setProperty(
+          draggableEl.style.setProperty(
             "transform",
-            `translate(${currentValueRef.current.x}px, ${currentValueRef.current.y}px)`
+            `translate(${lerpedElementPosition.current.x}px, ${lerpedElementPosition.current.y}px)`
           );
 
           timeoutRef = setTimeout(transitionStep, 10);
         } else {
           ended.current = true;
         }
-      }
+      };
 
       transitionStep();
-    }
-    if (!runOnce.current) initialLerpedTransition(500);
+    };
+    initialLerpedTransition(500);
 
     return () => {
       if (timeoutRef) clearTimeout(timeoutRef);
@@ -123,9 +103,8 @@ const Draggable = ({
     setIsDraggingCurrent(false);
 
     ended.current = false;
-    runOnce.current = false;
     cords.current = { x: 0, y: 0 };
-    currentValueRef.current = { x: 0, y: 0 };
+    lerpedElementPosition.current = { x: 0, y: 0 };
 
     if (droppabledIdRef.current != null && onDragEnd && isDraggingRef.current) {
       onDragEnd(droppabledIdRef.current, draggableId);
@@ -134,18 +113,13 @@ const Draggable = ({
   };
 
   const handleOnMouseMove = (event: MouseEvent) => {
-    const e = event;
-    if (bound.current == null) return;
+    const xCord = event.x - bound.current!.x;
+    const yCord = event.y - bound.current!.y;
 
-    const xCord = e.x - bound.current!.x;
-    const yCord = e.y - bound.current!.y;
-
-    if (
-      xCord === initMousePos?.current?.x &&
-      yCord === initMousePos.current.y
-    ) {
+    if (xCord === initMousePos.current!.x && yCord === initMousePos.current!.y)
       return;
-    }
+
+    const draggableEl = draggableElementRef.current!;
 
     ref.current?.style.setProperty("pointer-events", "none");
 
@@ -154,36 +128,33 @@ const Draggable = ({
     cords.current.x = xCord;
     cords.current.y = yCord;
 
-    if (draggableElementRef?.current == null) return;
+    draggableEl.style.setProperty("display", "none");
 
-    draggableElementRef.current.style.setProperty("display", "none");
     const elemBelow = document.elementFromPoint(
       event.clientX,
       event.clientY
     ) as HTMLElement;
-
     const el = elemBelow
       ? getElementWithAttribute(elemBelow, "data-droppable-context-id")
       : null;
 
     if (
       el != null &&
-      el?.getAttribute("data-droppable-context-id") === contextId &&
+      el.getAttribute("data-droppable-context-id") === contextId &&
       setDroppableId != null
     ) {
-      setDroppableId(el?.getAttribute("data-droppable-id"));
+      setDroppableId(el.getAttribute("data-droppable-id"));
     } else if (setDroppableId != null) {
       setDroppableId(null);
     }
 
-    draggableElementRef.current.style.setProperty("display", null);
+    draggableEl.style.setProperty("display", null);
 
-    if (ended.current) {
-      draggableElementRef?.current?.style.setProperty(
+    if (ended.current)
+      draggableEl.style.setProperty(
         "transform",
         `translate(${xCord}px, ${yCord}px)`
       );
-    }
   };
 
   useEffect(() => {
