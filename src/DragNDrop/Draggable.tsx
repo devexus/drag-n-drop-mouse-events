@@ -1,6 +1,7 @@
 import { cloneElement, ReactElement, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useDragDrop } from "./DragDropContext";
+import getElementWithAttribute from "./getElementWithAttribute";
 
 const Draggable = ({
   renderClone,
@@ -156,17 +157,21 @@ const Draggable = ({
     if (draggableElementRef?.current == null) return;
 
     draggableElementRef.current.style.setProperty("display", "none");
-    const elemBelow = document.elementFromPoint(event.clientX, event.clientY);
-    const droppableElement = elemBelow?.hasAttribute(
-      "data-droppable-context-id"
-    );
+    const elemBelow = document.elementFromPoint(
+      event.clientX,
+      event.clientY
+    ) as HTMLElement;
+
+    const el = elemBelow
+      ? getElementWithAttribute(elemBelow, "data-droppable-context-id")
+      : null;
 
     if (
-      droppableElement != null &&
-      elemBelow?.getAttribute("data-droppable-context-id") === contextId &&
+      el != null &&
+      el?.getAttribute("data-droppable-context-id") === contextId &&
       setDroppableId != null
     ) {
-      setDroppableId(elemBelow?.getAttribute("data-droppable-id"));
+      setDroppableId(el?.getAttribute("data-droppable-id"));
     } else if (setDroppableId != null) {
       setDroppableId(null);
     }
