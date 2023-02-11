@@ -122,7 +122,6 @@ const Draggable: FC<IDraggableProps> = ({
     draggableEl.style.setProperty("position", "fixed");
     draggableEl.style.setProperty("z-index", "5000");
     draggableEl.style.setProperty("width", `${b.width}px`);
-    draggableEl.style.setProperty("height", `50px`);
     draggableEl.style.setProperty("left", `${b.left}px`);
     draggableEl.style.setProperty("top", `${b.top}px`);
 

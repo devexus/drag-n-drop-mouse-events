@@ -66,7 +66,7 @@ function App() {
                   key={el.id}
                   draggableId={el.id}
                   renderClone={
-                    <div className="bg-color">
+                    <div className="bg-color" style={{ height: 50 }}>
                       {selected.length > 1 ? (
                         <div
                           style={{
